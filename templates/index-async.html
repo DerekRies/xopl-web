@@ -42,6 +42,8 @@
     $script([
       'app/lib/jquery.js',
       'app/lib/three.js',
+      'app/lib/stats.js',
+      'app/js/graphics.js',
       'app/lib/bootstrap.min.js',
       'app/lib/angular/angular.js',
       'app/lib/jquery.fittext.js',
@@ -67,7 +69,7 @@
 </head>
 <body>
 
-  <div class="whole-loader"><div class="loader"><div class="loader-icon"><span id="loader-percent">65%</span></div><div class="loader-text">Loading...</div></div><div class="fadebg"></div></div>
+  <div class="whole-loader"><div class="loader"><div class="loader-icon"><img style="margin-top:30px;" width="66" height="66" src="/app/img/ajax-loader.gif" alt=""></div><div class="loader-text">Loading...</div></div><div class="fadebg"></div></div>
   
   <div ng-view></div>
 
