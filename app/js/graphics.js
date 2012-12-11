@@ -5,6 +5,7 @@
 
     1 Solar Radius = 100 Three.JS units
     1 Juptier Radius = 10 Three.JS units
+    1 AU = 500 ThreeJS Units * (Stellar Radius / 2) + (Stellar Radius (in units) + Planet Size)
     
     1 Solar Radius = .1 Jupiter Radius = .01 Earth Radius
 
@@ -45,6 +46,7 @@
         if(typeof this.drawable === 'undefined'){
             var stargeo = new THREE.SphereGeometry(100,32,32);
             var starmat = new THREE.MeshBasicMaterial({color: this.starcolor});
+            // var starmat = new THREE.MeshNormalMaterial({color: this.starcolor});
             this.drawable = new THREE.Mesh(stargeo,starmat);
             scene.add(this.drawable);
             this.scale(this.size);
@@ -77,9 +79,7 @@
     };
 
     Star.prototype.update = function(dt) {
-        if(this.scaling){
-            this.scaleUpdate(dt);
-        }
+        this.drawable.rotation.y += .5 * dt;
     };
 
     Star.prototype.determineAttributes = function() {
@@ -163,10 +163,16 @@
         console.log(this);
     };
 
-    Planet.prototype.setup = function(planetData, scene) {
+    Planet.prototype.setup = function(planetData, scene,stsize) {
         // body...
         this.data = planetData;
+        this.scene = scene;
+        this.starsize = stsize;
         this.determineAttributes();
+        if(typeof this.orbit !== 'undefined'){
+            this.scene.remove(this.orbit);
+        }
+        this.orbit = undefined;
 
         if(typeof this.drawable === 'undefined'){
             var geo = new THREE.SphereGeometry(10,32,32);
@@ -178,9 +184,64 @@
         }
         else {
             // this.drawable.scale.x = this.drawable.scale.y = this.drawable.scale.z = this.size;
+            this.drawable.position.x = 300;
             this.scale(this.size);
             // this.drawable.material.color.setHex(this.starcolor);         
         }
+
+        this.drawOrbit();
+    };
+
+    Planet.prototype.drawOrbit = function() {
+        var c1,c2,c3,c4,A1,B1,A2,B2;
+
+        A1 = {x: -this.semiMajorAxis, y: 0};
+        A2 = {x: this.semiMajorAxis, y: 0};
+        B1 = {x: 0, y: this.minorAxis};
+        B1 = {x: 0, y: -this.minorAxis};
+
+        
+        this.orbitShape = new THREE.Shape();
+
+        if(this.eccentricity != 0){
+            c1 = {x: -this.semiMajorAxis, y: this.minorAxis };
+            c2 = {x: this.semiMajorAxis, y: this.minorAxis };
+            c3 = {x: this.semiMajorAxis, y: -this.minorAxis };
+            c4 = {x: -this.semiMajorAxis, y: -this.minorAxis };
+
+            this.orbitShape.moveTo(A1.x,A1.y);
+            this.orbitShape.bezierCurveTo(c1.x,c1.y,c2.x,c2.y,A2.x,A2.y);
+            this.orbitShape.bezierCurveTo(c3.x,c3.y,c4.x,c4.y,A1.x,A1.y);            
+        }
+        else{
+            // just draw a normal circle
+            this.orbitShape.moveTo( 0, this.semiMajorAxis );
+            this.orbitShape.quadraticCurveTo( this.semiMajorAxis, this.semiMajorAxis, this.semiMajorAxis, 0 );
+            this.orbitShape.quadraticCurveTo( this.semiMajorAxis, -this.semiMajorAxis, 0, -this.semiMajorAxis );
+            this.orbitShape.quadraticCurveTo( -this.semiMajorAxis, -this.semiMajorAxis, -this.semiMajorAxis, 0 );
+            this.orbitShape.quadraticCurveTo( -this.semiMajorAxis, this.semiMajorAxis, 0, this.semiMajorAxis );
+        }
+        console.log("drawing orbit");
+        this.drawShape( this.orbitShape, 0xffffff, 0, 0, 0, (Math.PI / 180) * 90, this.inclination, 0, 1 );
+    };
+
+    Planet.prototype.drawShape = function(shape, color, x, y, z, rx, ry, rz, s) {
+        // body...
+        console.log("drawing shape");
+        var geometry = shape.createPointsGeometry();
+        var material = new THREE.LineBasicMaterial( { linewidth: 10, color: color, transparent: true } );
+
+        console.log(this.orbit);
+
+        this.orbit = new THREE.Line( geometry, material );
+        this.orbit.position.set( x, y, z );
+        this.orbit.rotation.set( rx, ry, rz );
+        this.orbit.scale.set( s, s, s );
+        this.scene.add( this.orbit );
+    };
+
+    Planet.prototype.update = function(dt) {
+        this.drawable.position.x += 1 * dt;
     };
 
     Planet.prototype.scale = function(scalar) {
@@ -190,6 +251,31 @@
     Planet.prototype.determineAttributes = function() {
         // soon to come
         this.determineSize();
+        this.determineOrbit();
+    };
+
+    Planet.prototype.determineOrbit = function() {
+        // 1 AU = 500 ThreeJS Units * (Stellar Radius / 2) + (Stellar Radius (in units) + Planet Radius (in units))
+
+        this.semiMajorAxis = this.data.pl_orbsmax || .5;
+        this.semiMajorAxis = this.semiMajorAxis >= .1 ? this.semiMajorAxis : .1;
+        this.eccentricity = parseFloat(this.data.pl_orbeccen) || 0;
+        this.eccentricity = this.eccentricity >= .2 ? this.eccentricity : 0;
+        // if eccentricity is 0 we can just use a perfect circle. In fact anything under .2 can be rounded down to 0 eccen
+        // console.log(this.data.pl_orbeccen, this.eccentricity);
+        this.inclination = this.data.pl_orbincl || 0;
+        this.minorAxis = this.semiMajorAxis;
+        this.focusDistance = 0;
+        // console.log(this.semiMajorAxis,this.minorAxis);
+        if(this.eccentricity != 0){
+            this.focusDistance = this.semiMajorAxis * this.eccentricity;
+            this.minorAxis = Math.sqrt(Math.abs((this.focusDistance * this.focusDistance) - (this.semiMajorAxis * this.semiMajorAxis)));
+            // console.log(this.semiMajorAxis, this.minorAxis);
+        }
+        this.semiMajorAxis = (500 * this.semiMajorAxis) + ((this.starsize * 100) + (this.size * 10));
+        this.minorAxis = (500 * this.minorAxis) + ((this.starsize * 100) + (this.size * 10));
+        this.focusDistance = this.focusDistance != 0 ? (500 * this.focusDistance) + ((this.starsize * 100) + (this.size * 10)) : 0;
+        console.log(this.semiMajorAxis,this.minorAxis, this.eccentricity, this.focusDistance);
     };
 
     Planet.prototype.determineSize = function() {
@@ -211,21 +297,28 @@
     var Sim = function(){}
 
     Sim.prototype.init = function(){
+        var width = window.innerWidth;
+        var height = window.innerHeight;
         this.paused = false;
         this.speed = 1;
         this.ready = false;
         this.lastTick = 0;
 
         this.star = undefined;
+        this.planet = undefined;
         this.planets = [];
 
 
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        this.camera = new THREE.PerspectiveCamera(70, width/height, 0.1, 5000);
+        // this.camera = new THREE.OrthographicCamera(width / -2, width / 2, height / 2, height / -2, 1, 1000);
         this.renderer = new THREE.WebGLRenderer({antialias: true});
         this.renderer.setSize(window.innerWidth - 30, window.innerHeight - 15);
         this.container = document.getElementById('render-container');
         this.container.appendChild(this.renderer.domElement);
+
+        this.ambientLight = new THREE.AmbientLight(0xFFFFFF);
+        this.scene.add(this.ambientLight);
 
         this.stats = new Stats();
         this.stats.domElement.style.position = 'absolute';
@@ -234,7 +327,10 @@
         this.container.appendChild(this.stats.domElement);
 
         this.camera.position.z = 400;
-        this.camera.position.y = 0;
+        this.camera.position.y = 50;
+        // this.camera.position.z = 0;
+        // this.camera.position.y = 1505;
+        this.camera.lookAt(new THREE.Vector3(0,0,0));
         // this.tick();
     }
 
@@ -244,11 +340,11 @@
             this.lastTick = +new Date();
         }
         var now = +new Date();
-        var dt = ((now - this.lastTick) / 1000) * this.speed;
+        var dt = ((now - this.lastTick) / 1000);
 
         if(this.ready){
             this.nonSimUpdate(dt);
-            if(!this.paused){ this.update(dt); }
+            if(!this.paused){ this.update(dt * this.speed); }
             this.render();
             this.stats.update();
         } 
@@ -260,6 +356,7 @@
         // every update in the simulation
         // this.star.rotation.y += 0.01;
         this.star.update(dt);
+        this.planet.update(dt);
         // for(var i=0;i<this.planets.length;i++){
         //     this.planets[i].update(dt);
         // }
@@ -268,6 +365,11 @@
     Sim.prototype.nonSimUpdate = function(dt){
         // For updates that aren't part of the simulation...
         // Ex: The Camera Movement, panning around a paused simulation
+        // and the star scaling, especially important
+
+        if(this.star.scaling){
+            this.star.scaleUpdate(dt);
+        }
     };
 
     Sim.prototype.render = function() {
@@ -280,10 +382,24 @@
         // Recycle or create Star
         // Create Planets
         this.createStar(system);
-        this.createPlanet(system.planets[0]);
+        this.createPlanet(system.planets[0],this.star.size);
         this.ready = true;
         console.log(system);
+
+        // Circle
+
+        // var circleRadius = 200;
+        // var circleShape = new THREE.Shape();
+        // circleShape.moveTo( 0, circleRadius );
+        // circleShape.quadraticCurveTo( circleRadius, circleRadius, circleRadius, 0 );
+        // circleShape.quadraticCurveTo( circleRadius, -circleRadius, 0, -circleRadius );
+        // circleShape.quadraticCurveTo( -circleRadius, -circleRadius, -circleRadius, 0 );
+        // circleShape.quadraticCurveTo( -circleRadius, circleRadius, 0, circleRadius );
+
+
+        // this.addShape( circleShape, 0x00ff11, 0, 0, 0, (Math.PI / 180) * 90, 0, 0, 1 );
     };
+
 
     Sim.prototype.createStar = function(system) {
         if(typeof this.star === 'undefined'){
@@ -293,12 +409,12 @@
         this.star.setup(system, this.scene);
     };
 
-    Sim.prototype.createPlanet = function(planetData) {
+    Sim.prototype.createPlanet = function(planetData,starsize) {
         if(typeof this.planet === 'undefined'){
             // if there is no star create a new one
             this.planet = new Planet();
         }
-        this.planet.setup(planetData, this.scene);
+        this.planet.setup(planetData, this.scene, starsize);
     };
 
     window.Sim = new Sim();

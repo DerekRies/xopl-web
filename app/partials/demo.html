@@ -32,7 +32,7 @@
                     <tr ng-repeat="system in systems | filter:query | startFrom:currentPage*pageSize | limitTo:pageSize" ng-click="setActiveSystem(system,true)" ng-class="{active: isTarget(system)}">
                         <td width="300">{{system.name}}</td>
                         <td width="100">{{system.planets.length}}</td>
-                        <td width="100">{{system.st_dist}}</td>
+                        <td width="100">{{system.st_dist || "n/a"}}</td>
                     </tr>
                  </tbody>
              </table>

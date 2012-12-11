@@ -75,11 +75,13 @@ function DemoCtrl($scope,Systems) {
 
     $scope.setActiveSystem = function(target, close){
         // console.log(target);
-        $scope.activeSystem = target
-        if(close){
-            // $scope.closeSystemPanel();
+        if($scope.activeSystem !== target){
+            $scope.activeSystem = target
+            if(close){
+                // $scope.closeSystemPanel();
+            }
+            Sim.loadSystem(target);
         }
-        Sim.loadSystem(target);
     }
 
     $scope.setRandomSystem = function(){
