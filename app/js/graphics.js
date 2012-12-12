@@ -13,12 +13,19 @@
 
     var UNITS = {};
     UNITS.STELLAR = 50;
-    UNITS.JUPITER = 10;
+    UNITS.JUPITER = 5;
     UNITS.AU = 1000;
     // 1 Day is = .1 Seconds or 100ms. So over half a minute (36.5 seconds) for one full orbit of Earth
     UNITS.DAY = 100; 
 
+    var TEXTURES = {};
+    TEXTURES.CORONA = THREE.ImageUtils.loadTexture( "/app/img/embeds/corona.png", undefined, function(){
+        console.log("corona loaded?");
+    });
+
     window.UNITS = UNITS;
+    window.TEXTURES = TEXTURES;
+
 
     /*UNIT CONVERSIONS
 
@@ -64,6 +71,9 @@
         this.starData = starData;
         this.determineAttributes();
 
+        // need to draw the corona, fadeoff here as well
+        // also need to add particle effects
+
         if(typeof this.drawable === 'undefined'){
             var stargeo = new THREE.SphereGeometry(UNITS.STELLAR,32,32);
             var starmat = new THREE.MeshBasicMaterial({color: this.starcolor});
@@ -71,12 +81,25 @@
             this.drawable = new THREE.Mesh(stargeo,starmat);
             scene.add(this.drawable);
             this.scale(this.size);
+
+            this.sprite = new THREE.Sprite( { map: TEXTURES.CORONA, useScreenCoordinates: false, color: 0xffffff } );
+            this.sprite.color.setHex(this.starcolor);
+            this.sprite.scale.x = this.sprite.scale.y = this.sprite.scale.x = this.size * 140;
+            scene.add(this.sprite);
         }
         else {
             // this.drawable.scale.x = this.drawable.scale.y = this.drawable.scale.z = this.size;
             this.scale(this.size);
-            this.drawable.material.color.setHex(this.starcolor);         
+            this.drawable.material.color.setHex(this.starcolor);   
+
+            this.sprite.color.setHex(this.starcolor);      
+            this.sprite.scale.x = this.sprite.scale.y = this.sprite.scale.x = this.size * 140;
         }
+
+        // this.sprite = new THREE.Sprite( { map: TEXTURES.CORONA, useScreenCoordinates: false, color: 0xffffff } );
+        // this.sprite.color.setHex(this.starcolor);
+        // scene.add(this.sprite);
+
     };
 
     Star.prototype.scale = function(scalar) {
@@ -100,7 +123,7 @@
     };
 
     Star.prototype.update = function(dt) {
-        this.drawable.rotation.y += .5 * dt;
+        // this.drawable.rotation.y += .5 * dt;
     };
 
     Star.prototype.determineAttributes = function() {
@@ -384,11 +407,16 @@
         this.container = document.getElementById('render-container');
 
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(70, width/height, 0.1, 5000);
+        this.camera = new THREE.PerspectiveCamera(70, width/height, 0.1, 20000);
         // this.camera = new THREE.OrthographicCamera(width / -2, width / 2, height / 2, height / -2, 1, 1000);
 
         this.controls = new THREE.OrbitControls(this.camera, this.container);
         // this.controls.addEventListener( 'change', this.render );
+        // this.controls = new THREE.RollControls(this.camera, this.container);
+        // this.controls.movementSpeed = 100;
+        // this.controls.lookSpeed = 3;
+        // this.controls.constrainVertical = [ -0.5, 0.5 ];
+        // this.controls.mouseLook = false;
 
         this.renderer = new THREE.WebGLRenderer({antialias: true});
         this.renderer.setSize(window.innerWidth - 30, window.innerHeight - 15);
@@ -403,6 +431,8 @@
         this.stats.domElement.style.left = "620px";
         this.container.appendChild(this.stats.domElement);
 
+        this.renderer.set
+
         this.camera.position.z = 400;
         this.camera.position.y = 50;
         // this.camera.position.z = 0;
@@ -410,6 +440,11 @@
         this.camera.lookAt(new THREE.Vector3(0,0,0));;
         // this.tick();
     }
+
+    Sim.prototype.reload = function(system) {
+        // Used for reloading the Simulation of the same system with new settings
+        // that can't be changed during the simulation on the fly.
+    };
 
     Sim.prototype.tick = function() {
         // body...
@@ -443,7 +478,7 @@
         // For updates that aren't part of the simulation...
         // Ex: The Camera Movement, panning around a paused simulation
         // and the star scaling, especially important
-        this.controls.update();
+        this.controls.update(dt);
         if(this.star.scaling){
             // When new stars are selected they need to animate their size
             // This includes when the sim is paused

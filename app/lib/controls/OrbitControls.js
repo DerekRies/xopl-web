@@ -227,7 +227,6 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 	function onMouseMove( event ) {
 
-		console.log("mouse moving");
 		event.preventDefault();
 
 		if ( state === STATE.ROTATE ) {
@@ -273,8 +272,6 @@ THREE.OrbitControls = function ( object, domElement ) {
 	}
 
 	function onMouseWheel( event ) {
-
-		console.log("scrolling");
 
 		if ( ! scope.userZoom ) return;
 
