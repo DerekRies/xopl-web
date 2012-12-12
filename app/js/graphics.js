@@ -1,5 +1,23 @@
 (function(){
 
+    window.requestAnimFrame = (function(){
+      return  window.requestAnimationFrame       || 
+              window.webkitRequestAnimationFrame || 
+              window.mozRequestAnimationFrame    || 
+              window.oRequestAnimationFrame      || 
+              window.msRequestAnimationFrame     || 
+              function( callback ){
+                window.setTimeout(callback, 1000 / 60);
+              };
+    })();
+
+    var UNITS = {};
+    UNITS.STELLAR = 50;
+    UNITS.JUPITER = 10;
+    UNITS.AU = 1000;
+
+    window.UNITS = UNITS;
+
     /*UNIT CONVERSIONS
 
 
@@ -44,7 +62,7 @@
         this.determineAttributes();
 
         if(typeof this.drawable === 'undefined'){
-            var stargeo = new THREE.SphereGeometry(100,32,32);
+            var stargeo = new THREE.SphereGeometry(UNITS.STELLAR,32,32);
             var starmat = new THREE.MeshBasicMaterial({color: this.starcolor});
             // var starmat = new THREE.MeshNormalMaterial({color: this.starcolor});
             this.drawable = new THREE.Mesh(stargeo,starmat);
@@ -154,6 +172,9 @@
     };
 
 
+
+
+
     var Planet = function(){
         console.log("New Planet Created");
     }
@@ -163,11 +184,14 @@
         console.log(this);
     };
 
-    Planet.prototype.setup = function(planetData, scene,stsize) {
+    Planet.prototype.setup = function(planetData, scene,stsize,star) {
         // body...
         this.data = planetData;
         this.scene = scene;
+        this.star = star;
         this.starsize = stsize;
+        this.angle = 0;
+        this.velocity = 5; // The speed that the planet is orbiting at
         this.determineAttributes();
         if(typeof this.orbit !== 'undefined'){
             this.scene.remove(this.orbit);
@@ -175,7 +199,7 @@
         this.orbit = undefined;
 
         if(typeof this.drawable === 'undefined'){
-            var geo = new THREE.SphereGeometry(10,32,32);
+            var geo = new THREE.SphereGeometry(UNITS.JUPITER,32,32);
             var mat = new THREE.MeshBasicMaterial({color: 0x00FF00});
             this.drawable = new THREE.Mesh(geo,mat);
             this.drawable.position.x = 300;
@@ -189,7 +213,7 @@
             // this.drawable.material.color.setHex(this.starcolor);         
         }
 
-        this.drawOrbit();
+        // this.drawOrbit();
     };
 
     Planet.prototype.drawOrbit = function() {
@@ -222,7 +246,9 @@
             this.orbitShape.quadraticCurveTo( -this.semiMajorAxis, this.semiMajorAxis, 0, this.semiMajorAxis );
         }
         console.log("drawing orbit");
-        this.drawShape( this.orbitShape, 0xffffff, 0, 0, 0, (Math.PI / 180) * 90, this.inclination, 0, 1 );
+        console.log("eccentricity: " + this.eccentricity);
+        this.inclination = 0;
+        this.drawShape( this.orbitShape, 0xffffff, this.focusDistance, 0, 0, (Math.PI / 180) * 90, this.inclination, 0, 1 );
     };
 
     Planet.prototype.drawShape = function(shape, color, x, y, z, rx, ry, rz, s) {
@@ -241,7 +267,18 @@
     };
 
     Planet.prototype.update = function(dt) {
-        this.drawable.position.x += 1 * dt;
+        // position along the orbit
+        var a = Math.PI / 180 * this.angle;
+        this.drawable.position.x = this.focusDistance + Math.cos(a)*this.semiMajorAxis;
+        this.drawable.position.z = Math.sin(a) * this.minorAxis;
+
+        if(this.eccentricity != 0 || this.velocity === null){
+            // Don't need to calculate if the orbit is a circle
+            var d = this.drawable.position.distanceTo(this.star.drawable.position);
+            this.velocity =  1/d * this.orbitalEnergy;
+            // console.log(this.velocity);
+        }
+        this.angle += this.velocity * dt;
     };
 
     Planet.prototype.scale = function(scalar) {
@@ -252,12 +289,33 @@
         // soon to come
         this.determineSize();
         this.determineOrbit();
+        this.determineVelocity();
+        // console.log(this.data);
+    };
+
+    Planet.prototype.determineVelocity = function() {
+        this.period = parseFloat(this.data.pl_orbper);
+        this.orbitalEnergy = (1 / this.period) * 100000;
+        if(this.eccentricity == 0){
+            this.velocity = null;
+        }
     };
 
     Planet.prototype.determineOrbit = function() {
         // 1 AU = 500 ThreeJS Units * (Stellar Radius / 2) + (Stellar Radius (in units) + Planet Radius (in units))
 
-        this.semiMajorAxis = this.data.pl_orbsmax || .5;
+        if(this.data.pl_orbsmax){
+            this.semiMajorAxis = this.data.pl_orbsmax;
+        }
+        else{
+            if(this.data.pl_orbper){
+                this.semiMajorAxis = parseFloat(this.data.pl_orbper) / 1000;
+            }
+            else{
+                this.semiMajorAxis = .5;
+            }
+        }
+        console.log(this.semiMajorAxis);
         this.semiMajorAxis = this.semiMajorAxis >= .1 ? this.semiMajorAxis : .1;
         this.eccentricity = parseFloat(this.data.pl_orbeccen) || 0;
         this.eccentricity = this.eccentricity >= .2 ? this.eccentricity : 0;
@@ -304,6 +362,10 @@
         this.ready = false;
         this.lastTick = 0;
 
+        this.targetPan = new THREE.Vector3(0,0,0);
+        this.deltaTargetPan = new THREE.Vector3(0,0,0);
+        this.panning = false;
+
         this.star = undefined;
         this.planet = undefined;
         this.planets = [];
@@ -330,7 +392,7 @@
         this.camera.position.y = 50;
         // this.camera.position.z = 0;
         // this.camera.position.y = 1505;
-        this.camera.lookAt(new THREE.Vector3(0,0,0));
+        this.camera.lookAt(new THREE.Vector3(0,0,0));;
         // this.tick();
     }
 
@@ -368,7 +430,22 @@
         // and the star scaling, especially important
 
         if(this.star.scaling){
+            // When new stars are selected they need to animate their size
+            // This includes when the sim is paused
             this.star.scaleUpdate(dt);
+        }
+        if(this.panning){
+            // Animate the panning of the camera to one of the auto repositions
+            this.deltaTargetPan.sub(this.targetPan, this.camera.position);
+            if(this.deltaTargetPan.length() <= 2){
+                this.panning = false;
+                this.camera.position.set(this.targetPan.x, this.targetPan.y, this.targetPan.z);
+            }
+            else{
+                this.deltaTargetPan.multiplyScalar(5 * dt);
+                this.camera.position.addSelf(this.deltaTargetPan);
+                this.camera.lookAt(this.scene.position);
+            }
         }
     };
 
@@ -382,7 +459,7 @@
         // Recycle or create Star
         // Create Planets
         this.createStar(system);
-        this.createPlanet(system.planets[0],this.star.size);
+        this.createPlanet(system.planets[0],this.star.size,this.star);
         this.ready = true;
         console.log(system);
 
@@ -400,6 +477,11 @@
         // this.addShape( circleShape, 0x00ff11, 0, 0, 0, (Math.PI / 180) * 90, 0, 0, 1 );
     };
 
+    Sim.prototype.panCamera = function(x,y,z) {
+        this.targetPan.set(x,y,z);
+        this.panning = true;
+    };
+
 
     Sim.prototype.createStar = function(system) {
         if(typeof this.star === 'undefined'){
@@ -409,17 +491,17 @@
         this.star.setup(system, this.scene);
     };
 
-    Sim.prototype.createPlanet = function(planetData,starsize) {
+    Sim.prototype.createPlanet = function(planetData,starsize,star) {
         if(typeof this.planet === 'undefined'){
             // if there is no star create a new one
             this.planet = new Planet();
         }
-        this.planet.setup(planetData, this.scene, starsize);
+        this.planet.setup(planetData, this.scene, starsize,star);
     };
 
     window.Sim = new Sim();
     window.tick = function(){
-        requestAnimationFrame(window.tick);
+        requestAnimFrame(window.tick);
         window.Sim.tick();
     }
     window.tick();

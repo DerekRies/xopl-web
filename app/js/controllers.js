@@ -33,8 +33,7 @@ function DemoCtrl($scope,Systems) {
 
         $('#freeflybtn').popover({trigger:"hover",placement:"bottom",delay:{"show":1000}});
         $('#camtargetbtn').popover({trigger:"hover",placement:"bottom",delay:{"show":1000}});
-        $('#cinematicbtn').popover({trigger:"hover",placement:"bottom",delay:{"show":1000}});
-        
+        $('#cinematicbtn').popover({trigger:"hover",placement:"bottom",delay:{"show":1000}});        
         $scope.currentPage = 0;
         $scope.pageSize = 17;
 
@@ -119,6 +118,24 @@ function DemoCtrl($scope,Systems) {
 
     $scope.setCameraMode = function(mode){
         $scope.cameraMode = mode;
+    };
+
+    $scope.setCamera = function(view){
+        switch(view){
+            case 1:
+                Sim.panCamera(0,0,1500);
+                break;
+            case 2:
+                Sim.panCamera(0,1500,0);
+                break;
+            case 3:
+                Sim.panCamera(1500,0,0);
+                break;
+            case 4:
+                Sim.panCamera(0,200,800);
+                break;
+
+        }
     };
 
     $scope.setSpeed = function(modifier){
