@@ -227,6 +227,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 	function onMouseMove( event ) {
 
+		console.log("mouse moving");
 		event.preventDefault();
 
 		if ( state === STATE.ROTATE ) {
@@ -273,6 +274,8 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 	function onMouseWheel( event ) {
 
+		console.log("scrolling");
+
 		if ( ! scope.userZoom ) return;
 
 		if ( event.wheelDelta > 0 ) {
@@ -287,6 +290,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 	}
 
+	console.log(this.domElement);
 	this.domElement.addEventListener( 'contextmenu', function ( event ) { event.preventDefault(); }, false );
 	this.domElement.addEventListener( 'mousedown', onMouseDown, false );
 	this.domElement.addEventListener( 'mousewheel', onMouseWheel, false );

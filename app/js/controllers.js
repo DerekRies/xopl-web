@@ -37,12 +37,14 @@ function DemoCtrl($scope,Systems) {
         $scope.currentPage = 0;
         $scope.pageSize = 17;
 
+        window.xoplloader.load();
         Systems.get(function(json){
             $scope.systems = json;
             console.log('finished loading');
             $scope.$digest();
             $scope.openSystemPanel();
             Sim.init();
+            window.xoplloader.done();
         },0);
 
     }
