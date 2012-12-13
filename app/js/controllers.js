@@ -31,6 +31,9 @@ function DemoCtrl($scope,Systems) {
         $scope.cameraMode = 'Target';
         $scope.playingText = "Playing";
 
+        $scope.orderProperty = 'planets.length';
+        $scope.reverse = true;
+
         $('#freeflybtn').popover({trigger:"hover",placement:"bottom",delay:{"show":1000}});
         $('#camtargetbtn').popover({trigger:"hover",placement:"bottom",delay:{"show":1000}});
         $('#cinematicbtn').popover({trigger:"hover",placement:"bottom",delay:{"show":1000}});        
@@ -47,32 +50,32 @@ function DemoCtrl($scope,Systems) {
             window.xoplloader.done();
         },0);
 
-    }
+    };
 
     $scope.determinePageSize = function(){
 
-    }
+    };
 
     $scope.numberOfPages = function(){
         return Math.ceil($scope.systems.length/$scope.pageSize);
-    }
+    };
 
     $scope.setPage = function(n){
         $scope.currentPage = n;
         console.log($scope.currentPage);
-    }
+    };
 
     $scope.isTarget = function(system){
         return system == $scope.activeSystem;
-    }
+    };
 
     $scope.report = function(system){
         console.log(system);
-    }
+    };
 
     $scope.getCurrentPage = function(){
         return $scope.currentPage + 1;
-    }
+    };
 
     $scope.setActiveSystem = function(target, close){
         // console.log(target);
@@ -83,13 +86,23 @@ function DemoCtrl($scope,Systems) {
             }
             Sim.loadSystem(target);
         }
-    }
+    };
+
+    $scope.setOrder = function(property){
+        if($scope.orderProperty !== property){
+            $scope.orderProperty = property;
+            $scope.reverse = false;
+        }
+        else{
+            $scope.reverse = !$scope.reverse;
+        }
+    };
 
     $scope.setRandomSystem = function(){
         var random = Math.floor(Math.random()*$scope.systems.length);
         $scope.currentPage = Math.floor(random / $scope.pageSize);
         $scope.setActiveSystem($scope.systems[random], false);
-    }
+    };
 
     $scope.closeSystemPanel = function(){
         $('#side-panel').removeClass('open');

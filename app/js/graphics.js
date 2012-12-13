@@ -22,6 +22,11 @@
     TEXTURES.CORONA = THREE.ImageUtils.loadTexture( "/app/img/embeds/corona.png", undefined, function(){
         console.log("corona loaded?");
     });
+    TEXTURES.CIRCLE = THREE.ImageUtils.loadTexture("/app/img/embeds/circle.png");
+    TEXTURES.FADEOFF = THREE.ImageUtils.loadTexture("/app/img/embeds/fadeoff.png");
+    TEXTURES.GLOW_PARTICLE = THREE.ImageUtils.loadTexture("/app/img/embeds/glow.png");
+    TEXTURES.NEBULA_PARTICLE = THREE.ImageUtils.loadTexture("/app/img/embeds/nebula2.png");
+
 
     window.UNITS = UNITS;
     window.TEXTURES = TEXTURES;
@@ -52,13 +57,13 @@
         console.log("NEW STAR CREATED");
         this.averages = [
         // [temp, mass, radius] // Spectral Class
-            [25000,60,15,0x5a73ff],  // O
-            [11000,18,7,0x5a73ff],   // B
-            [7500,3.2,2.5,0x6e9aff], // A
-            [6000,1.7,1.3,0x8bb5ff], // F
-            [5000,1.1,1.1,0xfff3a5], // G
-            [3500,.8,.9,0xffba78],   // K
-            [0,.3,.4,0xff693b]       // M
+            [25000,60,15,0x5a73ff,0x425fff],  // O
+            [11000,18,7,0x5a73ff,0x425fff],   // B
+            [7500,3.2,2.5,0x6e9aff,0x5085ff], // A
+            [6000,1.7,1.3,0xc0dbff,0x83b0ff], // F
+            [5000,1.1,1.1,0xfff3a5,0xffeb6c], // G
+            [3500,.8,.9,0xffba78,0xffae61],   // K
+            [0,.3,.4,0xff693b,0xff5a27]       // M
         ];
     }
 
@@ -75,30 +80,41 @@
         // also need to add particle effects
 
         if(typeof this.drawable === 'undefined'){
+            this.drawable = new THREE.Object3D();
+            scene.add(this.drawable);
+
             var stargeo = new THREE.SphereGeometry(UNITS.STELLAR,32,32);
             var starmat = new THREE.MeshBasicMaterial({color: this.starcolor});
-            // var starmat = new THREE.MeshNormalMaterial({color: this.starcolor});
-            this.drawable = new THREE.Mesh(stargeo,starmat);
-            scene.add(this.drawable);
-            this.scale(this.size);
+            this.sphereDrawable = new THREE.Mesh(stargeo,starmat);
 
-            this.sprite = new THREE.Sprite( { map: TEXTURES.CORONA, useScreenCoordinates: false, color: 0xffffff } );
-            this.sprite.color.setHex(this.starcolor);
-            this.sprite.scale.x = this.sprite.scale.y = this.sprite.scale.x = this.size * 140;
-            scene.add(this.sprite);
+
+            this.coronaSprite = new THREE.Sprite( { map: TEXTURES.CORONA, useScreenCoordinates: false, color: 0xffffff } );
+            this.coronaSprite.color.setHex(this.glowcolor);
+            this.coronaSprite.scale.x = this.coronaSprite.scale.y = this.coronaSprite.scale.x = 140;
+            this.coronaSprite.blending = THREE.AdditiveBlending;
+
+
+            this.fadeOff = new THREE.Sprite( { map: TEXTURES.FADEOFF, useScreenCoordinates: false, color: 0xffffff } );
+            this.fadeOff.color.setHex(this.glowcolor);
+            this.fadeOff.scale.x = this.fadeOff.scale.y = this.fadeOff.scale.x = 150;
+            this.fadeOff.blending = THREE.AdditiveBlending;
+
+            this.drawable.add(this.coronaSprite);
+            this.drawable.add(this.fadeOff);
+            this.drawable.add(this.sphereDrawable);
+
+            this.scale(this.size);
         }
         else {
             // this.drawable.scale.x = this.drawable.scale.y = this.drawable.scale.z = this.size;
             this.scale(this.size);
-            this.drawable.material.color.setHex(this.starcolor);   
+            this.sphereDrawable.material.color.setHex(this.starcolor);
+            // this.sphereDrawable.color.setHex(this.starcolor);
+            this.coronaSprite.color.setHex(this.glowcolor);
+            this.fadeOff.color.setHex(this.glowcolor);
+            // this.coronaSprite.scale.x = this.coronaSprite.scale.y = this.coronaSprite.scale.x = this.size * 140;
 
-            this.sprite.color.setHex(this.starcolor);      
-            this.sprite.scale.x = this.sprite.scale.y = this.sprite.scale.x = this.size * 140;
         }
-
-        // this.sprite = new THREE.Sprite( { map: TEXTURES.CORONA, useScreenCoordinates: false, color: 0xffffff } );
-        // this.sprite.color.setHex(this.starcolor);
-        // scene.add(this.sprite);
 
     };
 
@@ -112,13 +128,28 @@
 
         var dScale = this.targetScale - this.drawable.scale.x;
         var scaleAmt = dScale * dt * 8;
+
         this.drawable.scale.x += scaleAmt;
         this.drawable.scale.y += scaleAmt;
         this.drawable.scale.z += scaleAmt;
 
+        // this.sphereDrawable.scale.x += scaleAmt * 140;
+        // this.sphereDrawable.scale.y += scaleAmt * 140;
+        // this.sphereDrawable.scale.z += scaleAmt * 140;
+
+        this.coronaSprite.scale.x += scaleAmt * 140;
+        this.coronaSprite.scale.y += scaleAmt * 140;
+        this.coronaSprite.scale.z += scaleAmt * 140;
+
+        this.fadeOff.scale.x += scaleAmt * 150;
+        this.fadeOff.scale.y += scaleAmt * 150;
+        this.fadeOff.scale.z += scaleAmt * 150;
+
         if(Math.abs(this.targetScale - this.drawable.scale.x) <= .005){
             this.scaling = false;
             this.drawable.scale.x = this.drawable.scale.y = this.drawable.scale.z = this.targetScale;
+            this.coronaSprite.scale.x = this.coronaSprite.scale.y = this.coronaSprite.scale.z = this.targetScale * 140;
+            this.fadeOff.scale.x = this.fadeOff.scale.y = this.fadeOff.scale.z = this.targetScale * 140;
         }
     };
 
@@ -136,34 +167,48 @@
         if(this.starData.st_teff >= 25000){
             this.spectralClass = 0;
             this.starcolor = this.averages[this.spectralClass][3];
+            this.glowcolor = this.averages[this.spectralClass][4];
         }
         else if(this.starData.st_teff >= 11000 && this.starData.st_teff < 25000){
             this.spectralClass = 1;
             this.starcolor = this.averages[this.spectralClass][3];
+            this.glowcolor = this.averages[this.spectralClass][4];
+
         }
         else if(this.starData.st_teff >= 7500 && this.starData.st_teff < 11000){
             this.spectralClass = 2;
             this.starcolor = this.averages[this.spectralClass][3];
+            this.glowcolor = this.averages[this.spectralClass][4];
+
         }
         else if(this.starData.st_teff >= 6000 && this.starData.st_teff < 7500){
             this.spectralClass = 3;
             this.starcolor = this.averages[this.spectralClass][3];
+            this.glowcolor = this.averages[this.spectralClass][4];
+
         }
-        else if(this.starData.st_teff >= 5500 && this.starData.st_teff < 6000){
+        else if(this.starData.st_teff >= 5300 && this.starData.st_teff < 6000){
             this.spectralClass = 4;
             this.starcolor = 0xFFFFFF;
+            this.glowcolor = 0xFFFFFF;
         }
-        else if(this.starData.st_teff >= 5000 && this.starData.st_teff < 5500){
+        else if(this.starData.st_teff >= 5000 && this.starData.st_teff < 5300){
             this.spectralClass = 4;
             this.starcolor = this.averages[this.spectralClass][3];
+            this.glowcolor = this.averages[this.spectralClass][4];
+
         }
         else if(this.starData.st_teff >= 3500 && this.starData.st_teff < 5000){
             this.spectralClass = 5;
             this.starcolor = this.averages[this.spectralClass][3];
+            this.glowcolor = this.averages[this.spectralClass][4];
+
         }
         else if(this.starData.st_teff >= 1 && this.starData.st_teff < 3500){
             this.spectralClass = 6;
             this.starcolor = this.averages[this.spectralClass][3];
+            this.glowcolor = this.averages[this.spectralClass][4];
+
         }
         else{
             // fall back, make a guess based on radius or size
@@ -173,6 +218,7 @@
                         this.spectralClass = i;
                         console.log(this.spectralClass);
                         this.starcolor = this.averages[this.spectralClass][3];
+                        this.glowcolor = this.averages[this.spectralClass][4];
                         break;
                     }
                 }
@@ -181,6 +227,7 @@
                 // if all else fails, its like the sun
                 this.spectralClass = 4;
                 this.starcolor = this.averages[this.spectralClass][3];
+                this.glowcolor = this.averages[this.spectralClass][4];
             }
         }
 
@@ -193,7 +240,7 @@
             this.size = parseFloat(this.starData.st_rad);
         }
         else{
-            this.size = 1;
+            this.size = 1 + ((Math.random() / 5) - .1);
         }
         // if not use the average size given the temp and color
     };
@@ -254,7 +301,7 @@
 
     Planet.prototype.drawOrbit = function(segments) {
         
-        this.orbitShape = new THREE.Shape();
+        // this.orbitShape = new THREE.Shape();
 
         var segLength = 360 / segments;
         this.orbitShape = new THREE.Shape();
@@ -360,7 +407,7 @@
         }
         this.semiMajorAxis = (UNITS.AU * this.semiMajorAxis) + ((this.starsize * UNITS.STELLAR) + (this.size * UNITS.JUPITER));
         this.minorAxis = (UNITS.AU * this.minorAxis) + ((this.starsize * UNITS.STELLAR) + (this.size * UNITS.JUPITER));
-        this.focusDistance = this.focusDistance != 0 ? (UNITS.AU * this.focusDistance) + ((this.starsize * UNITS.STELLAR) + (this.size * UNITS.JUPITER)) : 0;
+        this.focusDistance = this.focusDistance != 0 ? (UNITS.AU * this.focusDistance) + ((this.starsize * UNITS.STELLAR * .7) + (this.size * UNITS.JUPITER)) : 0;
 
         // this.semiMajorAxis = (UNITS.AU * this.semiMajorAxis);
         // this.minorAxis = (UNITS.AU * this.minorAxis);
@@ -431,15 +478,55 @@
         this.stats.domElement.style.left = "620px";
         this.container.appendChild(this.stats.domElement);
 
-        this.renderer.set
-
         this.camera.position.z = 400;
         this.camera.position.y = 50;
         // this.camera.position.z = 0;
         // this.camera.position.y = 1505;
-        this.camera.lookAt(new THREE.Vector3(0,0,0));;
+        this.camera.lookAt(this.scene.position);
+
+        var particleCount = 8,
+            particles = new THREE.Geometry(),
+            pMaterial =
+              new THREE.ParticleBasicMaterial({
+                color: 0xFFFFFF,
+                size: 20,
+                map: TEXTURES.GLOW_PARTICLE,
+                // blending: THREE.AdditiveBlending,
+                transparent: true,
+                depthTest: false
+              });
+
+        // // now create the individual particles
+        // for(var p = 0; p < particleCount; p++) {
+        //     console.log('particle');
+        //   // create a particle with random
+        //   // position values, -250 -> 250
+        //   var pX = Math.random() * 75 - 33,
+        //       pY = Math.random() * 75 - 33,
+        //       pZ = Math.random() * 75 - 33,
+        //       particle = new THREE.Vector3(pX, pY, pZ);
+
+        //   // add it to the geometry
+        //   // particles.vertices.push(particle);
+        // }
+
+        // create the particle system
+        var particleSystem =
+          new THREE.ParticleSystem(
+            particles,
+            pMaterial);
+
+        this.scene.add(particleSystem);
+        // this.particles = particles;
+        // this.particleSystem = particleSystem;
+
+        document.addEventListener( 'mousemove', this.mousemove, false );
         // this.tick();
     }
+
+    Sim.prototype.mousemove = function(e) {
+        
+    };
 
     Sim.prototype.reload = function(system) {
         // Used for reloading the Simulation of the same system with new settings

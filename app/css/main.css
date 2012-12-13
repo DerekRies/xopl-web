@@ -282,6 +282,17 @@ hr {border-top: 1px solid #ADADAD;}
     text-align:center;
 }
 
+#info-overlay {
+    position:fixed;
+    top:100px;
+    left:50px;
+    z-index:5;
+}
+
+#info-overlay > h1 {
+    font-size:40px;
+}
+
 #render-container {
     position:absolute;
     width:100%;
